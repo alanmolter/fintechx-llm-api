@@ -1,99 +1,150 @@
 # FinTechX - Text-to-SQL LLM API
 
-Este repositório contém a solução para o desafio técnico da **Laborit**, que consiste no desenvolvimento de uma API baseada em LLM capaz de traduzir perguntas analíticas em linguagem natural para consultas SQL otimizadas e seguras. A API se conecta ao banco de dados `northwind` e foi projetada com foco em escala, confiabilidade e custo operacional.
+API inteligente que traduz perguntas em linguagem natural para consultas SQL, utilizando **GPT-4-turbo**, **Function Calling**, **RAG (ChromaDB)**, **Cache Inteligente** e **Guardrails de Segurança**. Conecta-se ao banco de dados Northwind (MySQL) e foi projetada com foco em escala, confiabilidade e custo operacional.
+
+> **Deploy em produção:** [https://fintechx-llm-api.onrender.com](https://fintechx-llm-api.onrender.com)
 
 ---
 
 ## Arquitetura da Solução
 
-> O desenho de arquitetura é obrigatório conforme os critérios do desafio.
-
 ![Diagrama de Arquitetura](./docs/arquitetura.png)
 
-Para mais detalhes sobre decisões técnicas, fluxo da requisição, estratégias de escalabilidade e segurança, consulte o [Documento de Arquitetura](./ARCHITECTURE.MD).
+O documento completo de arquitetura, com decisões técnicas e estratégias de escalabilidade, está em [ARCHITECTURE.MD](./ARCHITECTURE.MD).
 
-### Fluxo da Requisição
+### Pipeline da Requisição
 
-1. O usuário envia uma pergunta em linguagem natural (ex: *"Qual o ticket médio?"*) via endpoint `POST /api/v1/query`.
-2. A aplicação verifica o **Cache em Memória**. Se houver um *Hit*, a query SQL em cache é executada diretamente no banco de dados.
-3. Em caso de *Miss*, a pergunta passa pelo **RAG (ChromaDB)** para recuperar o contexto de negócios da FinTechX.
-4. O prompt enriquecido é enviado ao LLM (OpenAI) utilizando **Function Calling** para garantir um retorno estruturado (JSON com SQL e Explicação).
-5. A query gerada passa por **Guardrails de Segurança**, bloqueando comandos DDL/DML.
-6. A query validada é executada no banco MySQL e os dados são retornados ao usuário com a explicação contextualizada.
+```
+Pergunta (linguagem natural)
+    │
+    ▼
+┌─────────────────────┐
+│  1. CACHE (MD5)     │ ──── HIT? ──── Pula direto para etapa 5
+│  Verifica se a       │
+│  pergunta já foi     │
+│  processada          │
+└─────────┬───────────┘
+          │ MISS
+          ▼
+┌─────────────────────┐
+│  2. RAG (ChromaDB)  │  Busca regras de negócio relevantes
+│  Busca vetorial de   │  (ex: "ticket médio", "cliente corporativo")
+│  contexto de negócio │  via similaridade semântica
+└─────────┬───────────┘
+          │
+          ▼
+┌─────────────────────┐
+│  3. LLM (GPT-4)     │  Gera SQL via Function Calling
+│  Prompt = Schema +   │  Retorno estruturado: {sql_query, explanation}
+│  Contexto RAG        │  temperature=0.0 para determinismo
+└─────────┬───────────┘
+          │
+          ▼
+┌─────────────────────┐
+│  4. GUARDRAILS       │  Valida: só SELECT/WITH, sem DDL/DML,
+│  Validação SQL       │  apenas tabelas do Northwind
+└─────────┬───────────┘
+          │
+          ▼
+┌─────────────────────┐
+│  5. MySQL            │  Executa SQL e retorna dados em tempo real
+│  (Northwind DB)      │
+└─────────────────────┘
+```
 
-### Decisões Técnicas e Justificativas
+### Técnicas Utilizadas
 
-- **Function Calling:** Escolhido em detrimento do *prompt engineering* tradicional para garantir previsibilidade e evitar quebras de parsing no backend.
-- **Cache Inteligente (Hash de SQL):** O cache armazena a string SQL atrelada à pergunta, e não os dados finais. Isso zera o custo de tokens e a latência de chamadas à API do LLM para perguntas repetidas, mantendo os dados de resposta sempre atualizados em tempo real.
-- **Busca Vetorial (RAG):** Utilizada para injetar dicionários de dados e regras de negócio específicas da FinTechX (ex: cálculo de ticket médio) apenas quando necessário, economizando tokens no prompt e evitando alucinações.
-- **Segurança e Guardrails:** Aplicação do princípio de defesa em profundidade. Mesmo utilizando o usuário `user_read_only`, a aplicação possui regex estrito para barrar comandos como `DROP` ou `UPDATE` e validar o escopo das tabelas do Northwind.
-- **Processamento Assíncrono:** Requisições assíncronas para comunicação de rede (LLM) garantem alta concorrência, enquanto a comunicação com o banco utiliza pool de conexões otimizado via `SQLAlchemy`.
+| Técnica | Implementação |
+|---------|--------------|
+| **Prompt Engineering** | System prompt com schema completo do banco (tabelas, colunas, relacionamentos) |
+| **Function Calling** | `tool_choice` forçado para retorno JSON estruturado `{sql_query, explanation}` |
+| **RAG** | ChromaDB com 10 regras de negócio + OpenAI embeddings (`text-embedding-3-small`) |
+| **Busca Vetorial** | Similaridade semântica para recuperar top-2 regras mais relevantes por pergunta |
+| **Cache Inteligente** | Hash MD5 da pergunta normalizada, TTL de 24h, cacheia SQL (não dados) |
+| **Guardrails** | Regex para DDL/DML + validação de tabelas permitidas + obrigatoriedade de SELECT/WITH |
 
 ---
 
-## Como Executar o Projeto Localmente
+## Como Executar Localmente
 
 ### Pré-requisitos
 
-- Python 3.10+
-- Conta na OpenAI (para a chave da API)
+- **Python 3.10+** instalado
+- **Chave da API da OpenAI** com créditos disponíveis
 
-### Passo a Passo
-
-1. **Clone o repositório:**
+### Passo 1: Clonar o repositório
 
 ```bash
-git clone https://github.com/alanmolter/laborit.git
-cd laborit
+git clone https://github.com/alanmolter/fintechx-llm-api.git
+cd fintechx-llm-api
 ```
 
-2. **Crie e ative o ambiente virtual:**
+### Passo 2: Criar e ativar o ambiente virtual
 
 ```bash
 python -m venv venv
+```
 
-# No Windows:
+No **Windows**:
+```bash
 venv\Scripts\activate
+```
 
-# No Linux/Mac:
+No **Linux/Mac**:
+```bash
 source venv/bin/activate
 ```
 
-3. **Instale as dependências:**
+### Passo 3: Instalar dependências
 
 ```bash
 pip install -r requirements.txt
 ```
 
-4. **Configure as variáveis de ambiente:**
+### Passo 4: Configurar variáveis de ambiente
 
-Crie um arquivo `.env` na raiz do projeto baseado no `.env.example`:
+Copie o arquivo de exemplo e edite com sua chave da OpenAI:
 
 ```bash
 cp .env.example .env
 ```
 
-Edite o arquivo `.env` e insira sua chave da OpenAI:
+Edite o `.env` e substitua o valor de `LLM_API_KEY`:
 
 ```
+DB_HOST=northwind-mysql-db.ccghzwgwh2c7.us-east-1.rds.amazonaws.com
+DB_PORT=3306
+DB_USER=user_read_only
+DB_PASS=laborit_teste_2789
+DB_NAME=northwind
 LLM_API_KEY=sua_chave_openai_aqui
 ```
 
-5. **Execute a aplicação:**
+### Passo 5: Iniciar a aplicação
 
 ```bash
 uvicorn app.main:app --reload
 ```
 
-6. **Acesse a Documentação Interativa (Swagger):**
+### Passo 6: Acessar a API
 
-Abra o navegador em: [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Swagger (documentação interativa):** [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Health check:** [http://localhost:8000/health](http://localhost:8000/health)
+- **Perguntas de exemplo:** [http://localhost:8000/api/v1/examples](http://localhost:8000/api/v1/examples)
+
+### Exemplo de uso via curl
+
+```bash
+curl -X POST http://localhost:8000/api/v1/query \
+  -H "Content-Type: application/json" \
+  -d '{"question": "Quais são os produtos mais vendidos em termos de quantidade?"}'
+```
 
 ---
 
-## Testes
+## Testes Automatizados
 
-O projeto possui testes automatizados para os guardrails de segurança e o serviço de cache:
+O projeto possui **24 testes** cobrindo os guardrails de segurança SQL e o serviço de cache:
 
 ```bash
 pytest tests/ -v
@@ -101,58 +152,67 @@ pytest tests/ -v
 
 ---
 
-## CI/CD e Deploy na Nuvem
+## CI/CD e Deploy
 
-Como diferencial, este projeto possui uma esteira de CI/CD automatizada utilizando **GitHub Actions**.
+O projeto possui CI/CD automatizado via **GitHub Actions**:
 
-Qualquer push na branch `main` dispara:
-
-1. Verificação de ambiente e instalação de dependências.
-2. Execução de testes automatizados com `pytest`.
-3. Deploy contínuo via webhook no servidor de produção (Render).
+1. **CI**: Instala dependências + executa `pytest` a cada push/PR na branch `main`.
+2. **CD**: Aciona deploy automático no **Render** via webhook após os testes passarem.
 
 ---
 
 ## Estrutura do Projeto
 
 ```
-laborit/
-├── .github/workflows/deploy.yml    # CI/CD Pipeline
-├── .env.example                    # Template de variáveis de ambiente
-├── ARCHITECTURE.MD                 # Documento técnico de arquitetura
-├── README.md                       # Este documento
-├── requirements.txt                # Dependências Python
+fintechx-llm-api/
+├── .github/workflows/deploy.yml   # Pipeline CI/CD (GitHub Actions)
+├── .env.example                   # Template de variáveis de ambiente
+├── .python-version                # Versão do Python para o Render (3.11)
+├── ARCHITECTURE.MD                # Documento técnico de arquitetura
+├── README.md                      # Este documento
+├── requirements.txt               # Dependências Python
 ├── docs/
-│   └── arquitetura.png             # Diagrama de arquitetura
+│   └── arquitetura.png            # Diagrama de arquitetura
 ├── app/
-│   ├── __init__.py
-│   ├── main.py                     # Entry point FastAPI
+│   ├── main.py                    # Entry point FastAPI + rotas utilitárias
 │   ├── core/
-│   │   ├── __init__.py
-│   │   ├── config.py               # Configurações e env vars
-│   │   └── security.py             # Guardrails de validação SQL
+│   │   ├── config.py              # Configurações centralizadas (.env)
+│   │   └── security.py            # Guardrails de validação SQL
 │   ├── db/
-│   │   ├── __init__.py
-│   │   ├── session.py              # Engine SQLAlchemy
-│   │   └── repository.py           # Execução de queries
+│   │   ├── session.py             # Engine SQLAlchemy (pool de conexões)
+│   │   └── repository.py          # Execução de queries no banco
 │   ├── models/
-│   │   ├── __init__.py
-│   │   └── schemas.py              # Modelos Pydantic
+│   │   └── schemas.py             # Modelos Pydantic (request/response)
 │   ├── routers/
-│   │   ├── __init__.py
-│   │   └── query.py                # Endpoints da API
+│   │   └── query.py               # Endpoints da API (pipeline principal)
 │   └── services/
-│       ├── __init__.py
-│       ├── llm_service.py          # Integração OpenAI + Function Calling
-│       ├── rag_service.py          # ChromaDB + Busca Vetorial
-│       └── cache_service.py        # Cache inteligente em memória
-├── tests/
-│   ├── __init__.py
-│   ├── test_security.py            # Testes dos guardrails
-│   └── test_cache.py               # Testes do cache
-└── Development Assessment (Dev Back).pdf
+│       ├── llm_service.py         # OpenAI GPT-4-turbo + Function Calling
+│       ├── rag_service.py         # ChromaDB + Busca Vetorial (RAG)
+│       └── cache_service.py       # Cache inteligente em memória
+└── tests/
+    ├── test_security.py           # Testes dos guardrails SQL
+    └── test_cache.py              # Testes do serviço de cache
 ```
 
 ---
 
-Feito com dedicação por ALAN MOLTER.
+## Perguntas de Exemplo
+
+A API é capaz de responder perguntas analíticas como:
+
+1. Quais são os produtos mais populares entre os clientes corporativos?
+2. Quais são os produtos mais vendidos em termos de quantidade?
+3. Qual é o volume de vendas por cidade?
+4. Quais são os clientes que mais compraram?
+5. Quais são os produtos mais caros da loja?
+6. Quais são os fornecedores mais frequentes nos pedidos?
+7. Quais os melhores vendedores?
+8. Qual é o valor total de todas as vendas realizadas por ano?
+9. Qual é o valor total de vendas por categoria de produto?
+10. Qual o ticket médio por compra?
+
+Além destas, a API aceita **qualquer pergunta analítica** sobre o banco Northwind.
+
+---
+
+Feito com dedicação por **Alan Molter** para o desafio do Círculo LAB.

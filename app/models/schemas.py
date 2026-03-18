@@ -1,7 +1,18 @@
+"""
+schemas.py - Modelos de dados Pydantic (request/response).
+
+Define a estrutura esperada das requisições e respostas da API.
+O FastAPI utiliza esses schemas para validação automática,
+serialização e geração da documentação Swagger.
+"""
+
 from pydantic import BaseModel, Field
 from typing import Any, List, Dict, Optional
 
+
 class QueryRequest(BaseModel):
+    """Modelo de entrada: a pergunta em linguagem natural do usuário."""
+
     question: str = Field(
         ...,
         description="A pergunta em linguagem natural feita pelo usuário.",
@@ -21,8 +32,11 @@ class QueryRequest(BaseModel):
         }
     )
 
+
 class QueryResponse(BaseModel):
-    question: str
-    sql_query: str = Field(..., description="A query SQL gerada pelo LLM.")
-    data: List[Dict[str, Any]] = Field(..., description="Os resultados extraídos do banco de dados.")
-    explanation: Optional[str] = Field(None, description="Uma explicação contextualizada dos resultados.")
+    """Modelo de saída: contém a pergunta, o SQL gerado, os dados e a explicação."""
+
+    question: str = Field(..., description="A pergunta original feita pelo usuário.")
+    sql_query: str = Field(..., description="A query SQL gerada pelo LLM via Function Calling.")
+    data: List[Dict[str, Any]] = Field(..., description="Os registros retornados pelo banco de dados.")
+    explanation: Optional[str] = Field(None, description="Explicação em português do raciocínio analítico do LLM.")
