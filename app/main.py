@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from app.routers import query
 from app.core.config import settings
 
@@ -9,6 +10,10 @@ app = FastAPI(
 )
 
 app.include_router(query.router)
+
+@app.get("/", include_in_schema=False)
+def root():
+    return RedirectResponse(url="/docs")
 
 @app.get("/health", tags=["Health"])
 def health_check():
