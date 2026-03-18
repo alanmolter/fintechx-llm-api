@@ -54,7 +54,7 @@ A arquitetura utiliza rotas assíncronas (`async def`) no FastAPI para a comunic
 Para garantir a integridade dos dados e prevenir ataques de injeção:
 
 - **Isolamento de Credenciais:** O acesso ocorre via um usuário estritamente de leitura (`user_read_only`).
-- **Validação na Camada de Aplicação:** Implementação de Guardrails baseados em expressões regulares que bloqueiam palavras-chave destrutivas (`DROP`, `DELETE`, `ALTER`, etc.) e verificam se as tabelas acessadas pertencem ao escopo do negócio (`customers`, `orders`, `products`, `employees`, `order details`, `categories`, `suppliers`, `shippers`).
+- **Validação na Camada de Aplicação:** Implementação de Guardrails baseados em expressões regulares que bloqueiam palavras-chave destrutivas (`DROP`, `DELETE`, `ALTER`, etc.) e verificam se as tabelas acessadas pertencem ao escopo do negócio (`customers`, `orders`, `order_details`, `products`, `employees`, `suppliers`, `shippers`, `invoices`, `purchase_orders`).
 - **Function Calling contra Prompt Injection:** Forçar o LLM a operar através de uma ferramenta (`tool_choice`) reduz drasticamente a superfície de ataque para comandos maliciosos disfarçados de perguntas de negócios.
 
 ## 4. Escalabilidade e Custo Operacional

@@ -20,52 +20,52 @@ collection = chroma_client.get_or_create_collection(
 BUSINESS_RULES = [
     {
         "id": "rule_ticket_medio",
-        "text": "O 'ticket médio' é calculado somando o valor total de todas as vendas (UnitPrice * Quantity da tabela `order details`) e dividindo pelo número total de pedidos distintos (OrderID). Use: SELECT AVG(subtotal) FROM (SELECT od.OrderID, SUM(od.UnitPrice * od.Quantity) AS subtotal FROM `order details` od GROUP BY od.OrderID) t.",
+        "text": "O 'ticket médio' é calculado somando o valor total de todas as vendas (unit_price * quantity da tabela order_details) e dividindo pelo número total de pedidos distintos (order_id). Use: SELECT AVG(subtotal) FROM (SELECT od.order_id, SUM(od.unit_price * od.quantity) AS subtotal FROM order_details od GROUP BY od.order_id) t.",
         "metadata": {"topic": "métricas financeiras"}
     },
     {
         "id": "rule_clientes_corporativos",
-        "text": "Um 'cliente corporativo' é definido como qualquer registro na tabela `customers` onde o campo `CompanyName` não seja nulo e possua um `ContactTitle` de gerência ou diretoria (ex: Manager, Owner, Sales Representative).",
+        "text": "Um 'cliente corporativo' é definido como qualquer registro na tabela customers onde o campo 'company' não seja nulo e possua um 'job_title' de gerência ou diretoria (ex: Manager, Owner, Purchasing Manager).",
         "metadata": {"topic": "segmentação de clientes"}
     },
     {
         "id": "rule_melhores_vendedores",
-        "text": "Os 'melhores vendedores' são os funcionários (employees) que geraram a maior receita total em vendas. Junte employees -> orders -> `order details` e some UnitPrice * Quantity para cada EmployeeID.",
+        "text": "Os 'melhores vendedores' são os funcionários (employees) que geraram a maior receita total em vendas. Junte employees -> orders -> order_details e some unit_price * quantity para cada employee_id. Use CONCAT(e.first_name, ' ', e.last_name) para o nome.",
         "metadata": {"topic": "kpi funcionários"}
     },
     {
         "id": "rule_produtos_mais_vendidos",
-        "text": "Os 'produtos mais vendidos em quantidade' são obtidos juntando `products` com `order details` e somando a coluna Quantity por ProductName. ORDER BY SUM(Quantity) DESC.",
+        "text": "Os 'produtos mais vendidos em quantidade' são obtidos juntando products com order_details e somando a coluna quantity por product_name. ORDER BY SUM(quantity) DESC.",
         "metadata": {"topic": "análise de produtos"}
     },
     {
         "id": "rule_volume_vendas_cidade",
-        "text": "O 'volume de vendas por cidade' é calculado juntando `orders` com `order details`, somando UnitPrice * Quantity e agrupando por ShipCity da tabela orders.",
+        "text": "O 'volume de vendas por cidade' é calculado juntando orders com order_details, somando unit_price * quantity e agrupando por ship_city da tabela orders.",
         "metadata": {"topic": "análise geográfica"}
     },
     {
         "id": "rule_clientes_mais_compraram",
-        "text": "Os 'clientes que mais compraram' são identificados juntando `customers` com `orders` e `order details`, somando UnitPrice * Quantity por CompanyName.",
+        "text": "Os 'clientes que mais compraram' são identificados juntando customers com orders e order_details, somando unit_price * quantity por customers.company.",
         "metadata": {"topic": "análise de clientes"}
     },
     {
         "id": "rule_vendas_por_ano",
-        "text": "O 'valor total de vendas por ano' é obtido extraindo o ano de OrderDate (YEAR(o.OrderDate)), juntando orders com `order details` e somando UnitPrice * Quantity agrupado por ano.",
+        "text": "O 'valor total de vendas por ano' é obtido extraindo o ano de order_date (YEAR(o.order_date)), juntando orders com order_details e somando unit_price * quantity agrupado por ano.",
         "metadata": {"topic": "análise temporal"}
     },
     {
         "id": "rule_vendas_por_categoria",
-        "text": "O 'valor total de vendas por categoria' requer juntar `categories` com `products` e `order details`. Agrupe por CategoryName e some UnitPrice * Quantity.",
+        "text": "O 'valor total de vendas por categoria' requer juntar products com order_details. A coluna de categoria é products.category (texto direto, não há tabela separada). Agrupe por p.category e some od.unit_price * od.quantity.",
         "metadata": {"topic": "análise por categoria"}
     },
     {
         "id": "rule_fornecedores_frequentes",
-        "text": "Os 'fornecedores mais frequentes nos pedidos' são obtidos juntando `suppliers` com `products` e `order details`. Conte o número de OrderIDs distintos por supplier CompanyName.",
+        "text": "Os 'fornecedores mais frequentes nos pedidos' são obtidos juntando suppliers com products (via supplier_ids) e order_details. Conte o número de order_ids distintos por suppliers.company. Nota: products.supplier_ids pode conter IDs separados por ponto-e-vírgula.",
         "metadata": {"topic": "análise de fornecedores"}
     },
     {
         "id": "rule_produtos_mais_caros",
-        "text": "Os 'produtos mais caros' são simplesmente obtidos da tabela `products` ordenando por UnitPrice DESC. SELECT ProductName, UnitPrice FROM products ORDER BY UnitPrice DESC.",
+        "text": "Os 'produtos mais caros' são obtidos da tabela products ordenando por list_price DESC. SELECT product_name, list_price FROM products ORDER BY list_price DESC.",
         "metadata": {"topic": "análise de preços"}
     }
 ]
