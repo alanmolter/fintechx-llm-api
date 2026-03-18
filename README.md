@@ -8,9 +8,9 @@ Este repositório contém a solução para o desafio técnico da **Laborit**, qu
 
 > O desenho de arquitetura é obrigatório conforme os critérios do desafio.
 
-![Diagrama de Arquitetura](./fintechx-llm-api/docs/arquitetura.png)
+![Diagrama de Arquitetura](./docs/arquitetura.png)
 
-Para mais detalhes sobre decisões técnicas, fluxo da requisição, estratégias de escalabilidade e segurança, consulte o [Documento de Arquitetura](./fintechx-llm-api/ARCHITECTURE.MD).
+Para mais detalhes sobre decisões técnicas, fluxo da requisição, estratégias de escalabilidade e segurança, consulte o [Documento de Arquitetura](./ARCHITECTURE.MD).
 
 ### Fluxo da Requisição
 
@@ -44,7 +44,7 @@ Para mais detalhes sobre decisões técnicas, fluxo da requisição, estratégia
 
 ```bash
 git clone https://github.com/alanmolter/laborit.git
-cd laborit/fintechx-llm-api
+cd laborit
 ```
 
 2. **Crie e ative o ambiente virtual:**
@@ -67,7 +67,7 @@ pip install -r requirements.txt
 
 4. **Configure as variáveis de ambiente:**
 
-Crie um arquivo `.env` na pasta `fintechx-llm-api/` baseado no `.env.example`:
+Crie um arquivo `.env` na raiz do projeto baseado no `.env.example`:
 
 ```bash
 cp .env.example .env
@@ -91,6 +91,16 @@ Abra o navegador em: [http://localhost:8000/docs](http://localhost:8000/docs)
 
 ---
 
+## Testes
+
+O projeto possui testes automatizados para os guardrails de segurança e o serviço de cache:
+
+```bash
+pytest tests/ -v
+```
+
+---
+
 ## CI/CD e Deploy na Nuvem
 
 Como diferencial, este projeto possui uma esteira de CI/CD automatizada utilizando **GitHub Actions**.
@@ -108,39 +118,38 @@ Qualquer push na branch `main` dispara:
 ```
 laborit/
 ├── .github/workflows/deploy.yml    # CI/CD Pipeline
+├── .env.example                    # Template de variáveis de ambiente
+├── ARCHITECTURE.MD                 # Documento técnico de arquitetura
 ├── README.md                       # Este documento
-├── fintechx-llm-api/
-│   ├── .env.example                # Template de variáveis de ambiente
-│   ├── ARCHITECTURE.MD             # Documento técnico de arquitetura
-│   ├── requirements.txt            # Dependências Python
-│   ├── docs/
-│   │   └── arquitetura.png         # Diagrama de arquitetura
-│   ├── app/
+├── requirements.txt                # Dependências Python
+├── docs/
+│   └── arquitetura.png             # Diagrama de arquitetura
+├── app/
+│   ├── __init__.py
+│   ├── main.py                     # Entry point FastAPI
+│   ├── core/
 │   │   ├── __init__.py
-│   │   ├── main.py                 # Entry point FastAPI
-│   │   ├── core/
-│   │   │   ├── __init__.py
-│   │   │   ├── config.py           # Configurações e env vars
-│   │   │   └── security.py         # Guardrails de validação SQL
-│   │   ├── db/
-│   │   │   ├── __init__.py
-│   │   │   ├── session.py          # Engine SQLAlchemy
-│   │   │   └── repository.py       # Execução de queries
-│   │   ├── models/
-│   │   │   ├── __init__.py
-│   │   │   └── schemas.py          # Modelos Pydantic
-│   │   ├── routers/
-│   │   │   ├── __init__.py
-│   │   │   └── query.py            # Endpoints da API
-│   │   └── services/
-│   │       ├── __init__.py
-│   │       ├── llm_service.py      # Integração OpenAI + Function Calling
-│   │       ├── rag_service.py      # ChromaDB + Busca Vetorial
-│   │       └── cache_service.py    # Cache inteligente em memória
-│   └── tests/
+│   │   ├── config.py               # Configurações e env vars
+│   │   └── security.py             # Guardrails de validação SQL
+│   ├── db/
+│   │   ├── __init__.py
+│   │   ├── session.py              # Engine SQLAlchemy
+│   │   └── repository.py           # Execução de queries
+│   ├── models/
+│   │   ├── __init__.py
+│   │   └── schemas.py              # Modelos Pydantic
+│   ├── routers/
+│   │   ├── __init__.py
+│   │   └── query.py                # Endpoints da API
+│   └── services/
 │       ├── __init__.py
-│       ├── test_security.py        # Testes dos guardrails
-│       └── test_cache.py           # Testes do cache
+│       ├── llm_service.py          # Integração OpenAI + Function Calling
+│       ├── rag_service.py          # ChromaDB + Busca Vetorial
+│       └── cache_service.py        # Cache inteligente em memória
+├── tests/
+│   ├── __init__.py
+│   ├── test_security.py            # Testes dos guardrails
+│   └── test_cache.py               # Testes do cache
 └── Development Assessment (Dev Back).pdf
 ```
 
