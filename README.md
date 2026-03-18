@@ -155,4 +155,4 @@ laborit/
 
 ---
 
-Feito com dedicação para o desafio do Círculo LAB.
+Feito com dedicação por ALAN MOLTER.
